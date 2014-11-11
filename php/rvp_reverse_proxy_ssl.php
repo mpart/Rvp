@@ -1,7 +1,7 @@
 <?php
 
 	/*
-	 * Copyright jounilaa 24.9.2014 - 19.10.2014, 22.10.2014 @ Metropolia
+	 * Copyright jounilaa 24.9.2014 - 19.10.2014, 22.10.2014, 7.11.2014 @ 
 	 *
 	 * PHP and extensions needed:
 	 * php55-5.5.16                   "PHP Scripting Language"
@@ -22,7 +22,7 @@
 	 * If defined, HttpRvp removes chunks and returns only one responce instead."); 
 	 */
 	/* Clearly faster without this setting: */
-	define("REMOVECHUNKS", 1);
+	define("REMOVECHUNKS", 1); 
 
 	/*
 	 * If "true", output debug html instead of headers (garbled output).
@@ -41,12 +41,12 @@
 	 */
 	define("REWRITECONTENTLENGTH", 0);
 	
-	define( "PRINTNOHEADERS", 0 );
+	//define( "PRINTNOHEADERS", 0 );
 	
 	/*
 	 * Do not print all headers other than related to MIME (and other HTTP-relevant).
 	 */
-	define("CGIENABLE", 0);
+	//define("CGIENABLE", 0);
 
 	/*
 	 * PHP, tavallisimpia virheita:
@@ -82,8 +82,10 @@
 
 	/*
 	 * Variables.
+ 	 *
+	 * Do not forget to end the line with \r\n or the connection will be endless.
 	 */
-	$urlextra = ""; $urlpath=""; $httpextra = "";
+	$urlextra = ""; $urlpath=""; $httpextra = ""; $httppostextra = "";
 	$uriarray = ["",""];
 	$ret = false;
 
@@ -97,9 +99,16 @@
 		//$hostport = getservbyname('https', 'tcp');			// Port to establish the connection to
 		$urlpath = "/webservices/catalog/search/worldcat/sru";
 		//$urlextra = "";	// Extra GET variables.
+		$urlextra = "";
 		$hostport = getservbyname('http', 'tcp');			// Port to establish the connection to
 		// XML, chunks may garble UTF, any full one byte only charset to request
-		$httpextra = "Content-Type: text/xml; charset=iso-8859-1\r\n";			// Extra HTTP headers.
+		//$httpextra = "Accept: text/xml; text/html\r\n";		// Extra HTTP headers.
+		/*
+		 * Include headers in request from client, not here. These are not replaced. */
+		$httpextra .= "Accept-Charset: charset=iso-8859-1\r\n";		// Extra HTTP headers.
+		$httpextra .= "Via: Rvp.php\r\n";
+		$httppostextra = ""; // GET is used not POST, extra POST variables
+		//$httpextra = "Content-Type: text/xml; charset=iso-8859-1\r\n";	// Extra HTTP headers.
 		//$httpextra = "Content-Type: charset=UTF-8\r\n";			// Extra HTTP headers.
 	}else{
 		// BBC
@@ -149,7 +158,7 @@
 	/*
 	 * Proxy request to the remote server and output the result to the client.
 	 */
-	$ret = $rvpproxy->http_proxy_by_string( $hostname, $httpextra, $urlpath, $urlextra );
+	$ret = $rvpproxy->http_proxy_by_string( $hostname, $httppostextra, $httpextra, $urlpath, $urlextra );
 	if( ! $ret ){
 		echo "<!-- Error: http_proxy_by_string returned $ret . -->";
 	}

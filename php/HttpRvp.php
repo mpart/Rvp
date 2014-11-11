@@ -69,7 +69,7 @@
 		 */
 		public function decode_POST_string( $httpextra ){
 			$poststring = "";
-			$poststring .= $httpextra;
+			$poststring .= $httpextra; 
 			if( $_POST ){
 				//echo "<!-- ISSET _POST -->";
 				foreach ($_POST as $key => $value) {
@@ -83,7 +83,7 @@
 		/*
 		 * Determine called method and make a request string "requeststring".
 		 */
-		public function copy_by_method( $hostnamestring, $querystring, $poststring ){
+		public function copy_by_method( $hostnamestring, $querystring, $poststring, $extrahttpheaders ){
 			/*
 			 * Copy GET and POST to server.
 			 * 
@@ -161,6 +161,8 @@
 			}
 			//$requeststring .= "Connection: close \r\n"; // non persistent connection, will be closed after responce.
 
+			$requeststring .= $extrahttpheaders;
+
 			// Other HTTP keys here
 			$this->copy_cookies( $requeststring ); // Ends the HTTP header
 
@@ -213,7 +215,7 @@
 		 *
 		 * Accept: MUST NOT contain any multipart/byteranges the proxy can't read.
 		 */
-		public function http_proxy_by_string( $hostnamestring, $httpextra, $urlpath, $urlextra ){
+		public function http_proxy_by_string( $hostnamestring, $httppostextra, $httpextra, $urlpath, $urlextra ){
 			$poststring=""; $querystring=""; $req=""; $err="";
 
 			$hostname = $hostnamestring;
@@ -223,11 +225,11 @@
 			if( $querystring!="" )
 				$querystring = "?" . $querystring;
 
-			$poststring = $this->decode_POST_string( $httpextra );
+			$poststring = $this->decode_POST_string( $httppostextra );
 			
 			$querystring = $urlpath . "" . $querystring;
 
-			$req = $this->copy_by_method( $hostnamestring, $querystring, $poststring );
+			$req = $this->copy_by_method( $hostnamestring, $querystring, $poststring, $httpextra );
 			$req .= "\r\n"; // end of message/end of headers?? , needed
 
 			$this->debug_text( "<STRONG> 3. Request <PRE>[$req]</PRE></STRONG>");
@@ -317,27 +319,37 @@
 			// stream_get_line jaa jumiin, PHP: be able to fseek (<- joten streams:ia ei voi kayttaa)
 			
 
-			while( $err!=-1 && $err!=2 ){
+			while( $err!=-1 && $err!=-2 ){
 				$headerline = $this->read_header_line( 4096 );
 				if($headerline==-1){
 					//echo "\n<!-- Error: $headerline. (http_proxy_receive) -->";
+					$err=-1;
 					break;
 				}
-				if( $headerline==-2 ) // end of header
+				if( $headerline==-3 ){ // end of file
+					//echo "\n<!-- Error, EOF: $headerline. (http_proxy_receive) -->";
+					$err=-3;
+				}
+				if( $headerline==-2 ){ // end of header
+					$err=-2;
 					break;
+				}
 				$headerarray = explode(":", $headerline );
 				// hTtP cAsE inSeNsItIVe
 				if( $headerarray ){ // KORJAUS 29.10.2014
 				   if( count( $headerarray ) != 0 ){ // KORJAUS 29.10.2014
+					//echo "<PRE>READING HEADER $headerline </PRE>";
 					switch( strtolower( trim( $headerarray[0], " \t\n\r\x0B" ) ) ){ // trim off characters used in folding
 						case "transfer-encoding":
 							$transencoding = trim( $headerarray[1], " \t\n\r\x0B" ); 
 							$savedheadlinecount++;
-							if( ! defined("REMOVECHUNKS") )
-								echo( $headerline . "\r\n" );
+							if( ! defined("REMOVECHUNKS") ){
+								// echo( $headerline . "\r\n" ); // Lighttpd
+								header( $headerline , true ); // Apache
+							}
 							break;
 						case "content-length": // strcasecmp (
-							$contentlen = trim( $headerarray[1], " \t\n\r\x0B" ); 
+							$contentlen = trim( $headerarray[1], " \t\n\r\x0B" );
 							$contentlennumber = intval( $contentlen, 10);
 							$savedheadlinecount++;
 							break;
@@ -348,10 +360,10 @@
 						case "set-cookie":
 							$extraheaders = trim( $headerarray[1], " \t\n\r\x0B" );
 							break;
-						case "content-type":			// Specially in all CGI programs, MIME has to be present ( Apache, not Lighttpd )
+						case "content-type":		// Specially in all CGI programs, MIME has to be present ( Apache, not Lighttpd )
 							if( ! defined('PRINTNOHEADERS') || defined('CGIENABLE') ) 
-								header( "$headerline", true ); // Apache 3.11.2014
-								//echo( $headerline . "\r\n" ); 			// Print to headers if CGI was chosen, Lighttpd <3.11.2014
+								header( $headerline, true ); // Apache 3.11.2014
+								//echo( $headerline . "\r\n" ); 	// Print to headers if CGI was chosen, Lighttpd <3.11.2014
 							break;
 						case "": 	// extra "\r\n" ? end of headers, Apache?
 							break;	// removed KORJAUS 29.10. tulos: myos XML otsikot puuttuvat
@@ -361,6 +373,7 @@
 							// HTTP/1.1 400 org.oclc.wskey.api.WSKeyException: WsKeyParam(wskey) not found in request
 							continue;
 					}
+					//echo "<PRE>END READING HEADER $headerline </PRE>";
 				   }
 				}
 				$this->debug_text( "HERE: $headerline");
@@ -379,7 +392,8 @@
 			if( $_SERVER )
 				if( $_SERVER['REQUEST_METHOD'] === 'TRACE' || $_SERVER['REQUEST_METHOD'] === 'CONNECT' || 
 						$_SERVER['REQUEST_METHOD'] === 'HEAD'){ 
-					echo "\r\n\r\n"; // End of headers
+					header( "\r\n", true ); // End of headers, Apache
+					//echo "\r\n\r\n"; // End of headers, Lighttpd
 					return true;
 				}
 			
@@ -404,8 +418,10 @@
 
 				//if( $contentlen !== "" && $savedheadlinecount>1 ) // Read first contentlen and then chunks ?
 				$chunktext = $this->read_line( 128 );				// read chunk size
-				if( ! defined('REMOVECHUNKS') )
+				if( ! defined('REMOVECHUNKS') ){ // TESTI 7.11.2014: poisto ei vaikuta
 					$this->print_header_text(""); // end of headers section
+					//$this->print_header_text(""); // TESTI 2 7.11.2014: lisays ei vaikuta
+				} // molempien poisto ei vaikuta
 				while( $chunktext!=false ){ 
 					if( ! defined('REMOVECHUNKS') ){
 						echo $chunktext;
