@@ -42,23 +42,47 @@
 		/*
 		 * Decode query from client sent URL.
 		 */
-		public function decode_GET_url_query( $urlextra ){
+		public function decode_GET_url_query( $urlextra, $appendnametourl ){
 			$querystring = ""; $uriarray = ["", ""]; $ret = "";
+			$vararray = ["", ""];
+			$keyarray = ["", ""];
+			$indx=0;
+
 			if( isset( $_SERVER ) ){  
-						//echo "<!-- ISSET _SERVER -->";
+				//echo "<!-- ISSET _SERVER -->";
 		                $ret = $_SERVER[ 'REQUEST_URI' ];
 		                $uriarray = explode( "?", $ret, 2 );
 		                if( count( $uriarray ) > 1 ){
-		                        $querystring = $uriarray[1] . $urlextra;
-		                }
+					$querystring = "?";
+		                        //$querystring += $uriarray[1] . $urlextra; // old 12.11.2014, new ->
+					$vararray = explode( "&", $uriarray[1], 10 );
+					for( $indx=0; $indx < count( $vararray ); $indx++){	// foreach ei toimi tassa
+						$keyarray = explode( "=", $vararray[$indx], 2 );
+						if( count( $keyarray ) > 1 ){
+							if( $keyarray[0] == $appendnametourl ){
+								if( $appendnametourl!="" )
+									$querystring = "/" . $keyarray[1] . $querystring;
+							}else{
+								$querystring .= $keyarray[0] . "=" . $keyarray[1] ."&";
+							}
+						}
+					}
+				}
 			}else if( isset( $_GET ) ){
 				//echo "<!-- ISSET _GET -->";
+				if( count( $_GET ) > 1 )
+					$querystring = "?";
 				foreach ($_GET as $key => $value) {
-					$querystring .= $key . "=" . $value ."&";
+					if( $key == $appendnametourl ){ // new 12.11.2014
+						if( $appendnametourl!="" )
+							$querystring = "/" . $value . $querystring;
+					}else{
+						$querystring .= $key . "=" . $value ."&";
+					}
 				}
 			}else{
 				//echo "<!-- NO GET VARIABLES. -->";
-				return "";
+				return "" . $urlextra; // no '?' , lisays 12.11.2014: urlextra
 			}
 			$querystring .= $urlextra;
 			return $querystring;
@@ -215,15 +239,15 @@
 		 *
 		 * Accept: MUST NOT contain any multipart/byteranges the proxy can't read.
 		 */
-		public function http_proxy_by_string( $hostnamestring, $httppostextra, $httpextra, $urlpath, $urlextra ){
+		public function http_proxy_by_string( $hostnamestring, $httppostextra, $httpextra, $urlpath, $urlextra, $appendnametouri ){
 			$poststring=""; $querystring=""; $req=""; $err="";
 
 			$hostname = $hostnamestring;
 			
-			$querystring = $this->decode_GET_url_query( $urlextra );
+			$querystring = $this->decode_GET_url_query( $urlextra , $appendnametouri );
 
-			if( $querystring!="" )
-				$querystring = "?" . $querystring;
+			//if( $querystring!="" )
+			//	$querystring = "?" . $querystring;
 
 			$poststring = $this->decode_POST_string( $httppostextra );
 			

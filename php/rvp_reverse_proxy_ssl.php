@@ -86,6 +86,7 @@
 	 * Do not forget to end the line with \r\n or the connection will be endless.
 	 */
 	$urlextra = ""; $urlpath=""; $httpextra = ""; $httppostextra = "";
+	$appendnametourl = "";
 	$uriarray = ["",""];
 	$ret = false;
 
@@ -99,7 +100,7 @@
 		//$hostport = getservbyname('https', 'tcp');			// Port to establish the connection to
 		$urlpath = "/webservices/catalog/search/worldcat/sru";
 		//$urlextra = "";	// Extra GET variables.
-		$urlextra = "";
+		$urlextra = "wskey=xvIBPSpBwemdHlGsOmjR15cFx7hQ01hyMJ9lXGOfnOE8UFOKnqHwVwF6MQHlwzn3nLrp4iuL6rIomj1s&";
 		$hostport = getservbyname('http', 'tcp');			// Port to establish the connection to
 		// XML, chunks may garble UTF, any full one byte only charset to request
 		//$httpextra = "Accept: text/xml; text/html\r\n";		// Extra HTTP headers.
@@ -110,6 +111,7 @@
 		$httppostextra = ""; // GET is used not POST, extra POST variables
 		//$httpextra = "Content-Type: text/xml; charset=iso-8859-1\r\n";	// Extra HTTP headers.
 		//$httpextra = "Content-Type: charset=UTF-8\r\n";			// Extra HTTP headers.
+		$appendnametourl = "oclcid"; // GET variable whos value is appended to the URL -part before "?"
 	}else{
 		// BBC
 		$hoststring = 'www.bbc.com'; 				// String to use to open the connection with fsockopen
@@ -158,7 +160,7 @@
 	/*
 	 * Proxy request to the remote server and output the result to the client.
 	 */
-	$ret = $rvpproxy->http_proxy_by_string( $hostname, $httppostextra, $httpextra, $urlpath, $urlextra );
+	$ret = $rvpproxy->http_proxy_by_string( $hostname, $httppostextra, $httpextra, $urlpath, $urlextra, $appendnametourl );
 	if( ! $ret ){
 		echo "<!-- Error: http_proxy_by_string returned $ret . -->";
 	}
