@@ -30,7 +30,9 @@
 				Parent::__construct( $hoststring, $hostport );
 			}
 			if( defined('DEBUG') ){
-				echo "Content-Type: text/html \r\n\r\n<DOCTYPE html><HTML><HEAD><TITLE>Debug</TITLE></HEAD><BODY>";
+				//echo "Content-Type: text/html \r\n\r\n"; // Lighttpd
+				header("Content-Type: text/html \r\n"); // Apache
+				echo "<DOCTYPE html><HTML><HEAD><TITLE>Debug</TITLE></HEAD><BODY>";				
 			}
 		}
 		public function __destruct(){
