@@ -30,9 +30,7 @@
 				Parent::__construct( $hoststring, $hostport );
 			}
 			if( defined('DEBUG') ){
-				//echo "Content-Type: text/html \r\n\r\n"; // Lighttpd
-				header("Content-Type: text/html \r\n"); // Apache
-				echo "<DOCTYPE html><HTML><HEAD><TITLE>Debug</TITLE></HEAD><BODY>";				
+				echo "Content-Type: text/html \r\n\r\n<DOCTYPE html><HTML><HEAD><TITLE>Debug</TITLE></HEAD><BODY>";
 			}
 		}
 		public function __destruct(){
@@ -232,7 +230,7 @@
 				//echo "<!-- NO COOKIES. -->\n";
 				$requeststring .= "\r\n"; // last #1
 			}
-			$requeststring .= "\r\n"; // twice, #2, end of header
+			$requeststring .= " 	\r\n\r\n"; // twice, #2, end of header
 			//$requeststring .= "\r\n"; // third time, debug, #3, end of header 28.10.2014
 		}
 		/*
@@ -256,7 +254,7 @@
 			$querystring = $urlpath . "" . $querystring;
 
 			$req = $this->copy_by_method( $hostnamestring, $querystring, $poststring, $httpextra );
-			$req .= "\r\n"; // end of message/end of headers?? , needed
+			$req .= " 	\r\n\r\n"; // end of message/end of headers?? , needed
 
 			$this->debug_text( "<STRONG> 3. Request <PRE>[$req]</PRE></STRONG>");
 
@@ -281,8 +279,10 @@
 
 		protected function print_header_text( $htext ){
 			if( ! defined('PRINTNOHEADERS') ){
-				//echo $htext . "\r\n"; // Lighttpd
-				header($htext, true); // Apache 3.11.2014
+				if( ! defined('ECHOHEADERS') )
+					header($htext, true); // Apache 3.11.2014
+				else
+					echo $htext . "\r\n"; // Lighttpd
 			}
 		}
 		protected function output_message_and_count_contentlen( $maxlength, $extraheaders ){
@@ -293,7 +293,7 @@
 			$this->print_header_text( "Content-length: $bcount " );
 			if( $extraheaders!="" )
 				$this->print_header_text( $extraheaders ); // Cookies
-			$this->print_header_text( "" ); // end of headers
+			$this->print_header_text( " 	\r\n" ); // end of headers
 			echo $err; // message
 			return $bcount;
 		}
@@ -370,8 +370,10 @@
 							$transencoding = trim( $headerarray[1], " \t\n\r\x0B" ); 
 							$savedheadlinecount++;
 							if( ! defined("REMOVECHUNKS") ){
-								// echo( $headerline . "\r\n" ); // Lighttpd
-								header( $headerline , true ); // Apache
+								if( ! defined('ECHOHEADERS') )
+									header( $headerline , true ); // Apache
+								else
+									echo( $headerline . "\r\n" ); // Lighttpd
 							}
 							break;
 						case "content-length": // strcasecmp (
@@ -387,9 +389,12 @@
 							$extraheaders = trim( $headerarray[1], " \t\n\r\x0B" );
 							break;
 						case "content-type":		// Specially in all CGI programs, MIME has to be present ( Apache, not Lighttpd )
-							if( ! defined('PRINTNOHEADERS') || defined('CGIENABLE') ) 
-								header( $headerline, true ); // Apache 3.11.2014
-								//echo( $headerline . "\r\n" ); 	// Print to headers if CGI was chosen, Lighttpd <3.11.2014
+							if( ! defined('PRINTNOHEADERS') || defined('CGIENABLE') ){ 
+								if( ! defined('ECHOHEADERS') )
+									header( $headerline, true ); // Apache 3.11.2014
+								else
+									echo( $headerline . "\r\n" ); 	// Print to headers if CGI was chosen, Lighttpd <3.11.2014
+							}
 							break;
 						case "": 	// extra "\r\n" ? end of headers, Apache?
 							break;	// removed KORJAUS 29.10. tulos: myos XML otsikot puuttuvat
@@ -418,8 +423,10 @@
 			if( $_SERVER )
 				if( $_SERVER['REQUEST_METHOD'] === 'TRACE' || $_SERVER['REQUEST_METHOD'] === 'CONNECT' || 
 						$_SERVER['REQUEST_METHOD'] === 'HEAD'){ 
-					header( "\r\n", true ); // End of headers, Apache
-					//echo "\r\n\r\n"; // End of headers, Lighttpd
+					if( ! defined('ECHOHEADERS') )
+						header( " 	\r\n\r\n", true ); // End of headers, Apache
+					else
+						echo " 	\r\n\r\n"; // End of headers, Lighttpd
 					return true;
 				}
 			
@@ -445,7 +452,7 @@
 				//if( $contentlen !== "" && $savedheadlinecount>1 ) // Read first contentlen and then chunks ?
 				$chunktext = $this->read_line( 128 );				// read chunk size
 				if( ! defined('REMOVECHUNKS') ){ // TESTI 7.11.2014: poisto ei vaikuta
-					$this->print_header_text(""); // end of headers section
+					$this->print_header_text(" 	\r\n"); // end of headers section
 					//$this->print_header_text(""); // TESTI 2 7.11.2014: lisays ei vaikuta
 				} // molempien poisto ei vaikuta
 				while( $chunktext!=false ){ 
@@ -501,7 +508,7 @@
 					$this->print_header_text( "Content-length: $bytesoutput " );
 					if( $extraheaders!="" )
 						$this->print_header_text( $extraheaders );
-					$this->print_header_text(""); // end of headers section
+					$this->print_header_text(" 	\r\n"); // end of headers section
 					echo $chunkedoutput;
 				}
 				//if( defined('REMOVECHUNKS') )
@@ -523,7 +530,7 @@
 				}else{ // Fast
 					if( $contentlen != "" )
 						$this->print_header_text( "Content-length: $contentlen " ); // Decimal number text
-					$this->print_header_text("\r\n"); // end of headers section
+					$this->print_header_text(" 	\r\n"); // end of headers section
 					$err = $this->read_to_output( $contentlennumber ); // integer number
 					if( $err )
 						$bytesoutput += $err;
@@ -541,7 +548,7 @@
 						}else{
 							if( $contentlen != "" )
 								$this->print_header_text("Content-length: $contentlen ");
-							$this->print_header_text("\r\n");
+							$this->print_header_text(" 	\r\n");
 							$err = $this->read_to_output( $contentlennumber );
 						}
 					}else{
@@ -549,7 +556,7 @@
 						if( defined('REWRITECONTENTLENGTH') ){
 							$err = $this->output_message_and_count_contentlen( 65536, $extraheaders );
 						}else{
-							$this->print_header_text("\r\n");
+							$this->print_header_text(" 	\r\n");
 							$err = $this->read_to_output( 65536 ); // 4 x 16384
 						}
 					}
