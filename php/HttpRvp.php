@@ -30,7 +30,11 @@
 				Parent::__construct( $hoststring, $hostport );
 			}
 			if( defined('DEBUG') ){
-				echo "Content-Type: text/html \r\n\r\n<DOCTYPE html><HTML><HEAD><TITLE>Debug</TITLE></HEAD><BODY>";
+				if( defined('ECHOHEADERS') )
+					echo "Content-Type: text/html \r\n\r\n";
+				else
+					header("Content-Type: text/html \r\n");
+				echo "<!DOCTYPE html><HTML><HEAD><TITLE>Debug</TITLE></HEAD><BODY>";
 			}
 		}
 		public function __destruct(){
@@ -141,11 +145,12 @@
 			// PHP known allowed headers
 			$allowheaders = array ( 
 				'User-Agent:' => 'HTTP_USER_AGENT', 
-				'Accept:' => 'HTTP_ACCEPT', 
 				'Accept-Language:' => 'HTTP_ACCEPT_LANGUAGE', 
 				'Accept-Encoding:' => 'HTTP_ACCEPT_ENCODING', 
 				'Connection:' => 'HTTP_CONNECTION'
 			);
+			// Apache pois:
+			// 'Accept:' => 'HTTP_ACCEPT', 
 			// lighttpd, pois:
 			// 'Authorization:' => 'PHP_AUTH_DIGEST' 
 			// 'Accept-Charset:' => 'HTTP_ACCEPT_CHARSET', 
@@ -407,7 +412,7 @@
 					//echo "<PRE>END READING HEADER $headerline </PRE>";
 				   }
 				}
-				$this->debug_text( "HERE: $headerline");
+				$this->debug_text( "read headerline: [$headerline]");
 			}
 
 
@@ -452,7 +457,7 @@
 				//if( $contentlen !== "" && $savedheadlinecount>1 ) // Read first contentlen and then chunks ?
 				$chunktext = $this->read_line( 128 );				// read chunk size
 				if( ! defined('REMOVECHUNKS') ){ // TESTI 7.11.2014: poisto ei vaikuta
-					$this->print_header_text(" 	\r\n"); // end of headers section
+					$this->print_header_text("\r\n"); // end of headers section
 					//$this->print_header_text(""); // TESTI 2 7.11.2014: lisays ei vaikuta
 				} // molempien poisto ei vaikuta
 				while( $chunktext!=false ){ 
@@ -508,7 +513,7 @@
 					$this->print_header_text( "Content-length: $bytesoutput " );
 					if( $extraheaders!="" )
 						$this->print_header_text( $extraheaders );
-					$this->print_header_text(" 	\r\n"); // end of headers section
+					$this->print_header_text("\r\n"); // end of headers section
 					echo $chunkedoutput;
 				}
 				//if( defined('REMOVECHUNKS') )
@@ -530,7 +535,7 @@
 				}else{ // Fast
 					if( $contentlen != "" )
 						$this->print_header_text( "Content-length: $contentlen " ); // Decimal number text
-					$this->print_header_text(" 	\r\n"); // end of headers section
+					$this->print_header_text("\r\n"); // end of headers section
 					$err = $this->read_to_output( $contentlennumber ); // integer number
 					if( $err )
 						$bytesoutput += $err;
@@ -548,7 +553,7 @@
 						}else{
 							if( $contentlen != "" )
 								$this->print_header_text("Content-length: $contentlen ");
-							$this->print_header_text(" 	\r\n");
+							$this->print_header_text("\r\n"); // end of headers section
 							$err = $this->read_to_output( $contentlennumber );
 						}
 					}else{
@@ -556,7 +561,7 @@
 						if( defined('REWRITECONTENTLENGTH') ){
 							$err = $this->output_message_and_count_contentlen( 65536, $extraheaders );
 						}else{
-							$this->print_header_text(" 	\r\n");
+							$this->print_header_text("\r\n"); // end of headers section
 							$err = $this->read_to_output( 65536 ); // 4 x 16384
 						}
 					}
