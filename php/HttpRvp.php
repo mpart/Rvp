@@ -20,14 +20,14 @@
 		protected $hostname;
 		
 		public function __construct($hoststring, $hostport){
-			$argc=0;
+			$argc=0; $ret=true; $retstr="";
         		$argc = func_num_args();
 			if( $argc == 0){
 				//echo "\n<!-- HttpRvp, calling parent constructor, Parent::__construct1(); --> ";
 				Parent::__construct1();
 			}else{
 				//echo "\n<!-- HttpRvp, calling parent constructor, Parent::__construct( $hoststring, $hostport ); --> ";
-				Parent::__construct( $hoststring, $hostport );
+				$ret = Parent::__construct( $hoststring, $hostport );
 			}
 			if( defined('DEBUG') ){
 				if( defined('ECHOHEADERS') )
@@ -35,6 +35,12 @@
 				else
 					header("Content-Type: text/html \r\n");
 				echo "<!DOCTYPE html><HTML><HEAD><TITLE>Debug</TITLE></HEAD><BODY>";
+			}
+			if($ret==false){
+				$retstr = "<diagnostics>\n <diagnostic>\n  <message> Rvp.php: Connection closed to ";
+				$retstr .= $hoststring . ":" . $hostport . " . ";
+				$retstr .= "</message>\n </diagnostic>\n</diagnostics>\n ";
+				echo $retstr;			
 			}
 		}
 		public function __destruct(){

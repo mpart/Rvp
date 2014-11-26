@@ -39,18 +39,19 @@
 			// }
 		}
 		public function __construct($hoststring, $hostport){
-			$argc=0;
+			$argc=0; $ret=true;
                         $argc = func_num_args();
 			if( ! $this ){
 				//echo "\n<!-- Rvp __construct1: object this does not exist. -->";
 			}
                         if( $argc >= 2 ){
-				$this->init_socket($hoststring, $hostport);
+				$ret = $this->init_socket($hoststring, $hostport);
 				if( ! $this->socketfd ){
 					//echo "\n<!-- Rvp __construct1: this->socketfd does not exist. -->";
 				}
 			}
 			$this->__construct1();
+			return $ret;
 		}
 		public function __destruct(){
 			$this->close_socket();
@@ -112,19 +113,22 @@
 			/* Get the port for the WWW service. */
 
 			if( ! $remotehost || ! $remoteport){
-				echo "\n<!-- Error: remotehost or remoteport uninitialized ( -1 ) (init_socket), exit. -->";
+				if( defined('DEBUG') )
+					echo "\n<!-- Error: remotehost or remoteport uninitialized ( -1 ) (init_socket), exit. -->";
 				exit();
 			}
 
 			/* Create a SSL TCP/IP socket. */
 			$this->socketfd = fsockopen( $remotehost, $remoteport, $errno, $errstr, 10); /* 10 seconds timeout */
 			if($this->socketfd == false){
-				echo "<!-- Failed to create socket, $errstr ($errno). \n";
-				echo "     socket_strerror: [" . socket_strerror(socket_last_error()) . "] -->\n";
-			} //else {
-			//	echo "OK.\n";
-			//}
+				if( defined('DEBUG') ){
+					echo "<!-- Failed to create socket, $errstr ($errno). \n";
+					echo "     socket_strerror: [" . socket_strerror(socket_last_error()) . "] -->\n";
+				}
+				return false;
+			}
 			stream_set_timeout( $this->socketfd, 10 ); /* 10 seconds timeout */
+			return true;
 		} 
 		/*
 		 * Returns bytes read (to count them).
